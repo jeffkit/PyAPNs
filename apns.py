@@ -1,6 +1,6 @@
 from binascii import a2b_hex, b2a_hex
 from datetime import datetime
-from socket import socket, AF_INET, SOCK_STREAM
+from socket import socket, AF_INET, SOCK_STREAM,SOL_SOCKET,SO_KEEPALIVE
 from struct import pack, unpack
 
 try:
@@ -97,7 +97,7 @@ class APNsConnection(object):
     def _connect(self):
         # Establish an SSL connection
         self._socket = socket(AF_INET, SOCK_STREAM)
-        self._socket.setsockopt(socket.SOL_SOCKET,socket.SO_KEEPALIVE,1)
+        self._socket.setsockopt(SOL_SOCKET,SO_KEEPALIVE,1)
         self._socket.connect((self.server, self.port))
         self._ssl = wrap_socket(self._socket, self.key_file, self.cert_file)
 
