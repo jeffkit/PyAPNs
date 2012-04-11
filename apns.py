@@ -1,6 +1,6 @@
 from binascii import a2b_hex, b2a_hex
 from datetime import datetime
-from socket import socket, AF_INET, SOCK_STREAM,SOL_SOCKET,SO_KEEPALIVE
+from socket import socket, AF_INET, SOCK_STREAM, SOL_SOCKET, SO_KEEPALIVE
 from struct import pack, unpack
 
 try:
@@ -14,6 +14,7 @@ except ImportError:
     import simplejson as json
 
 MAX_PAYLOAD_LENGTH = 256
+
 
 class APNs(object):
     """A class representing an Apple Push Notification service connection"""
@@ -63,9 +64,9 @@ class APNs(object):
     def feedback_server(self):
         if not self._feedback_connection:
             self._feedback_connection = FeedbackConnection(
-                use_sandbox = self.use_sandbox,
-                cert_file = self.cert_file,
-                key_file = self.key_file
+                use_sandbox=self.use_sandbox,
+                cert_file=self.cert_file,
+                key_file=self.key_file
             )
         return self._feedback_connection
 
@@ -73,9 +74,9 @@ class APNs(object):
     def gateway_server(self):
         if not self._gateway_connection:
             self._gateway_connection = GatewayConnection(
-                use_sandbox = self.use_sandbox,
-                cert_file = self.cert_file,
-                key_file = self.key_file
+                use_sandbox=self.use_sandbox,
+                cert_file=self.cert_file,
+                key_file=self.key_file
             )
         return self._gateway_connection
 
@@ -92,12 +93,12 @@ class APNsConnection(object):
         self._ssl = None
 
     def __del__(self):
-        self._disconnect();
+        self._disconnect()
 
     def _connect(self):
         # Establish an SSL connection
         self._socket = socket(AF_INET, SOCK_STREAM)
-        self._socket.setsockopt(SOL_SOCKET,SO_KEEPALIVE,1)
+        self._socket.setsockopt(SOL_SOCKET, SO_KEEPALIVE, 1)
         self._socket.connect((self.server, self.port))
         self._ssl = wrap_socket(self._socket, self.key_file, self.cert_file)
 
@@ -116,6 +117,14 @@ class APNsConnection(object):
     def write(self, string):
         return self._connection().write(string)
 
+    def _chunks(self):
+        BUF_SIZE = 4096
+        while 1:
+            data = self.read(BUF_SIZE)
+            yield data
+            if not data:
+                break
+
 
 class PayloadAlert(object):
     def __init__(self, body, action_loc_key=None, loc_key=None,
@@ -128,7 +137,7 @@ class PayloadAlert(object):
         self.launch_image = launch_image
 
     def dict(self):
-        d = { 'body': self.body }
+        d = {'body': self.body}
         if self.action_loc_key:
             d['action-loc-key'] = self.action_loc_key
         if self.loc_key:
@@ -139,9 +148,11 @@ class PayloadAlert(object):
             d['launch-image'] = self.launch_image
         return d
 
+
 class PayloadTooLargeError(Exception):
     def __init__(self):
         super(PayloadTooLargeError, self).__init__()
+
 
 class Payload(object):
     """A class representing an APNs message payload"""
@@ -168,12 +179,12 @@ class Payload(object):
         if self.badge:
             d['badge'] = int(self.badge)
 
-        d = { 'aps': d }
+        d = {'aps': d}
         d.update(self.custom)
         return d
 
     def json(self):
-        return json.dumps(self.dict(), separators=(',',':'))
+        return json.dumps(self.dict(), separators=(',', ':'))
 
     def _check_size(self):
         if len(self.json()) > MAX_PAYLOAD_LENGTH:
@@ -195,14 +206,6 @@ class FeedbackConnection(APNsConnection):
             'feedback.push.apple.com',
             'feedback.sandbox.push.apple.com')[use_sandbox]
         self.port = 2196
-
-    def _chunks(self):
-        BUF_SIZE = 4096
-        while 1:
-            data = self.read(BUF_SIZE)
-            yield data
-            if not data:
-                break
 
     def items(self):
         """
@@ -239,6 +242,7 @@ class FeedbackConnection(APNsConnection):
                     # some more data and append to buffer
                     break
 
+
 class GatewayConnection(APNsConnection):
     """
     A class that represents a connection to the APNs gateway server
@@ -265,6 +269,44 @@ class GatewayConnection(APNsConnection):
 
         return notification
 
+    def _get_enhance_notification(self, token_hex, payload, identifier,
+                                  expiry):
+        """Ehance format have identifier, and expiry
+        """
+        token_bin = a2b_hex(token_hex)
+        token_length_bin = APNs.packed_ushort_big_endian(len(token_bin))
+        payload_json = payload.json()
+        payload_length_bin = APNs.packed_ushort_big_endian(len(payload_json))
+        expiry = APNs.packed_uint_big_endian(expiry)
+
+        notification = ('\1' + identifier + expiry + token_length_bin +
+                        token_bin + payload_length_bin + payload_json)
+        return notification
+
     def send_notification(self, token_hex, payload):
         self.write(self._get_notification(token_hex, payload))
 
+    def send_enhance_notification(self, token_hex, payload, identifier,
+                                  expiry):
+        """
+        Send an enahce format notification payload.
+        """
+        self.write(self._get_enhance_notification(token_hex, payload,
+                                                  identifier, expiry))
+
+    def get_error(self):
+        """
+        get error message from apns
+        """
+        buff = ''
+        for chunk in self._chunks():
+            buff += chunk
+
+        if len(buff) != 6:
+            return None
+        command = unpack('b', buff[0])[0]
+        if command != 8:
+            return None
+        error = unpack('b', buff[1])[0]
+        identifier = buff[2:]
+        return (identifier, error)
