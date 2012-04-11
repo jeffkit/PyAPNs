@@ -9,6 +9,7 @@ make it support ehanced protocol, easy to work with [apnsagent][a0].
 ## Installation
 
 Download the source from GitHub:
+    
     $ git clone git://github.com/jeffkit/PyAPNs.git
     $ cd PyAPNs
     $ sudo python setup.py
@@ -46,6 +47,7 @@ of the Payload constructor.
 ## Credits
 
 Written and maintained by Simon Whitaker at [Goo Software Ltd][goo].
+
 Maintailed by Jeff Kit at [toraysoft][toray].
 
 [a0]:https://github.com/jeffkit/apnsagent
