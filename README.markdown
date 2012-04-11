@@ -4,7 +4,7 @@ A Python library for interacting with the Apple Push Notification service
 (APNs)
 
 The Oringal version of PyAPNs is writen by Simon Whitaker, Jeff kit folk and
-make it support ehanced protocol, easy to work with apnsagent[a0].
+make it support ehanced protocol, easy to work with [apnsagent][a0].
 
 ## Installation
 
@@ -46,7 +46,7 @@ of the Payload constructor.
 ## Credits
 
 Written and maintained by Simon Whitaker at [Goo Software Ltd][goo].
-Maintailed by Jeff Kit at toraysoft[toray].
+Maintailed by Jeff Kit at [toraysoft][toray].
 
 [a0]:https://github.com/jeffkit/apnsagent
 [a1]:http://developer.apple.com/iphone/library/documentation/NetworkingInternet/Conceptual/RemoteNotificationsPG/Introduction/Introduction.html#//apple_ref/doc/uid/TP40008194-CH1-SW1
